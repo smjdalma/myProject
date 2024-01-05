@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.myproject.mapper.UserMapper">
+
+    <select id="users" resultType="UserDTO">
+        SELECT aa.*
+        FROM (
+                SELECT
+                    a.*,
+                    ROW_NUMBER() OVER(ORDER BY num) AS rnum,
+                    CEIL(ROW_NUMBER() OVER(ORDER BY num)::numeric / #{rows}) AS pageNumber
+                FROM tbl_user a
+                <include refid="search">
+                </include>
+            ) aa
+        WHERE aa.pageNumber = #{page}
+        ORDER BY aa.rnum;
+    </select>
+
+    <sql id="search">
+        <if test="searchString != null">
+            <choose>
+                <when test="searchField == 'num'.toString()">
+                    where num = #{searchString}::numeric
+                </when>
+                <when test="searchField == 'name'.toString()">
+                    where name like '%' || #{searchString} || '%'
+                </when>
+                <when test="searchField == 'add'.toString()">
+                    where add like '%' || #{searchString} || '%'
+                </when>
+            </choose>
+        </if>
+    </sql>
+
+    <insert id="insert">
+        insert into tbl_user(num, name, add)
+        values (#{num}::numeric, #{name}, #{add})
+    </insert>
+
+    <!-- TEST -->
+    <insert id="insert1000">
+        insert into tbl_user(num, name, add)
+        values
+        <foreach collection="list" item="userDTO" separator=",">
+            (#{userDTO.num}::numeric, #{userDTO.name}, #{userDTO.add})
+        </foreach>
+    </insert>
+
+    <select id="getCount" resultType="PagingUserDTO">
+        select
+            ceil(count(*) / 10::numeric) total,
+            count(*) page
+        from tbl_user
+        <include refid="search">
+        </include>
+    </select>
+
+    <update id="update">
+        update tbl_user
+        set name = #{name}, add = #{add}
+        where num = #{num}::numeric
+    </update>
+
+    <delete id="delete">
+        delete from tbl_user
+        where num = #{num}::numeric
+    </delete>
+
+</mapper>
